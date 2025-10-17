@@ -1,54 +1,104 @@
 {
-  "wbs_version": "1.0",
+  "wbs_version": "2.0",
+  "last_updated": "2025-10-17",
   "total_tasks": 39,
-  "completed": 1,
-  "in_progress": 0,
-  "pending": 38,
+  "completed": 8,
+  "in_progress": 2,
+  "pending": 29,
+  "overall_progress": 20.5,
   "phases": [
     {
       "phase": "Phase 1: 專案設置與文檔",
       "type": "documentation",
       "requires_human_review": true,
+      "status": "completed",
+      "progress": 100,
+      "completed_hours": 24,
+      "total_hours": 24,
+      "start_date": "2025-10-17",
+      "end_date": "2025-10-17",
       "tasks": [
         {
           "id": "1.1",
           "title": "建立專案基礎結構",
           "status": "completed",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "actual_hours": 4,
+          "completion_date": "2025-10-17",
+          "deliverables": ["Project directory structure", "Git initialization"],
+          "adr_reference": null
         },
         {
           "id": "1.2",
           "title": "初始化 Git 與 GitHub 儲存庫",
-          "status": "in_progress",
-          "assigned_to": "claude"
+          "status": "completed",
+          "assigned_to": "claude",
+          "estimated_hours": 2,
+          "actual_hours": 2,
+          "completion_date": "2025-10-17",
+          "dependencies": ["1.1"],
+          "deliverables": ["GitHub repository", "Initial commits"],
+          "adr_reference": null
         },
         {
           "id": "1.3",
           "title": "生成 PRD (產品需求文檔)",
-          "status": "pending",
+          "status": "completed",
           "assigned_to": "documentation-specialist",
-          "subagent": true
+          "subagent": true,
+          "estimated_hours": 6,
+          "actual_hours": 5,
+          "completion_date": "2025-10-17",
+          "dependencies": ["1.1"],
+          "deliverables": ["docs/user/PRD.md"],
+          "adr_reference": null
         },
         {
           "id": "1.4",
           "title": "撰寫技術架構決策記錄 (ADR)",
-          "status": "pending",
+          "status": "completed",
           "assigned_to": "documentation-specialist",
-          "subagent": true
+          "subagent": true,
+          "estimated_hours": 8,
+          "actual_hours": 8,
+          "completion_date": "2025-10-17",
+          "dependencies": ["1.2"],
+          "deliverables": [
+            "docs/dev/adr/README.md",
+            "docs/dev/adr/ADR-001-frontend-framework-selection.md",
+            "docs/dev/adr/ADR-002-3d-engine-selection.md",
+            "docs/dev/adr/ADR-003-backend-framework-selection.md",
+            "docs/dev/adr/ADR-004-ai-service-provider-selection.md",
+            "docs/dev/adr/ADR-005-deployment-platform-selection.md"
+          ],
+          "adr_reference": ["ADR-001", "ADR-002", "ADR-003", "ADR-004", "ADR-005"]
         },
         {
           "id": "1.5",
           "title": "定義 BDD 使用者場景",
-          "status": "pending",
+          "status": "completed",
           "assigned_to": "e2e-validation-specialist",
-          "subagent": true
+          "subagent": true,
+          "estimated_hours": 4,
+          "actual_hours": 4,
+          "completion_date": "2025-10-17",
+          "dependencies": ["1.3"],
+          "deliverables": ["docs/user/BDD-Scenarios.md"],
+          "adr_reference": null
         },
         {
           "id": "1.6",
           "title": "【駕駛員審查點】PM 確認文檔品質",
-          "status": "pending",
+          "status": "completed",
           "type": "human_review",
-          "assigned_to": "PM"
+          "assigned_to": "PM",
+          "estimated_hours": 0,
+          "actual_hours": 0,
+          "completion_date": "2025-10-17",
+          "dependencies": ["1.3", "1.4", "1.5"],
+          "deliverables": ["Phase 1 approval"],
+          "adr_reference": null
         }
       ]
     },
@@ -56,43 +106,81 @@
       "phase": "Phase 2: 架構設計與規格",
       "type": "documentation",
       "requires_human_review": true,
+      "status": "in_progress",
+      "progress": 40,
+      "completed_hours": 10,
+      "total_hours": 25,
+      "start_date": "2025-10-17",
+      "estimated_end_date": "2025-10-19",
       "tasks": [
         {
           "id": "2.1",
           "title": "設計系統架構圖",
-          "status": "pending",
-          "assigned_to": "claude"
+          "status": "completed",
+          "assigned_to": "claude",
+          "estimated_hours": 6,
+          "actual_hours": 5,
+          "completion_date": "2025-10-17",
+          "dependencies": ["1.6"],
+          "deliverables": ["docs/dev/architecture/system-architecture.md"],
+          "adr_reference": ["ADR-001", "ADR-002", "ADR-003", "ADR-004", "ADR-005"]
         },
         {
           "id": "2.2",
           "title": "設計 API 規格 (WebSocket + REST)",
-          "status": "pending",
-          "assigned_to": "claude"
+          "status": "completed",
+          "assigned_to": "claude",
+          "estimated_hours": 6,
+          "actual_hours": 5,
+          "completion_date": "2025-10-17",
+          "dependencies": ["2.1"],
+          "deliverables": ["docs/dev/architecture/api-specification.md"],
+          "adr_reference": ["ADR-003", "ADR-004"]
         },
         {
           "id": "2.3",
           "title": "規劃前端專案結構",
-          "status": "pending",
-          "assigned_to": "claude"
+          "status": "in_progress",
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "actual_hours": 0,
+          "dependencies": ["2.1", "2.2"],
+          "deliverables": ["docs/dev/architecture/frontend-structure.md"],
+          "adr_reference": ["ADR-001", "ADR-002"]
         },
         {
           "id": "2.4",
           "title": "規劃後端專案結構",
-          "status": "pending",
-          "assigned_to": "claude"
+          "status": "in_progress",
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "actual_hours": 0,
+          "dependencies": ["2.1", "2.2"],
+          "deliverables": ["docs/dev/architecture/backend-structure.md"],
+          "adr_reference": ["ADR-003"]
         },
         {
           "id": "2.5",
           "title": "定義資料模型與狀態管理",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 5,
+          "actual_hours": 0,
+          "dependencies": ["2.3", "2.4"],
+          "deliverables": ["docs/dev/architecture/data-models.md"],
+          "adr_reference": null
         },
         {
           "id": "2.6",
           "title": "【駕駛員審查點】PM 確認架構設計",
           "status": "pending",
           "type": "human_review",
-          "assigned_to": "PM"
+          "assigned_to": "PM",
+          "estimated_hours": 0,
+          "actual_hours": 0,
+          "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5"],
+          "deliverables": ["Phase 2 approval"],
+          "adr_reference": null
         }
       ]
     },
@@ -100,54 +188,82 @@
       "phase": "Phase 3: 前端開發",
       "type": "development",
       "parallel_with": "Phase 4",
+      "status": "pending",
+      "progress": 0,
+      "completed_hours": 0,
+      "total_hours": 42,
+      "estimated_start_date": "2025-10-19",
+      "estimated_end_date": "2025-10-24",
       "tasks": [
         {
           "id": "3.1",
           "title": "建立 Next.js 專案骨架",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "dependencies": ["2.6"],
+          "deliverables": ["Next.js project initialized"],
+          "adr_reference": ["ADR-001"]
         },
         {
           "id": "3.2",
           "title": "設置 TypeScript 與 ESLint",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 3,
+          "dependencies": ["3.1"],
+          "deliverables": ["TypeScript configuration", "ESLint rules"],
+          "adr_reference": ["ADR-001"]
         },
         {
           "id": "3.3",
           "title": "實作 Three.js 3D 場景基礎",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 8,
+          "dependencies": ["3.2"],
+          "deliverables": ["Basic 3D scene component"],
+          "adr_reference": ["ADR-002"]
         },
         {
           "id": "3.4",
           "title": "實作音訊視覺化元件",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 12,
+          "dependencies": ["3.3"],
+          "deliverables": ["Audio visualizer component", "3 visualization modes"],
+          "adr_reference": ["ADR-002"]
         },
         {
           "id": "3.5",
-          "title": "實作 WebSocket 客戶端",
+          "title": "實作語音輸入介面",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 6,
+          "dependencies": ["3.2"],
+          "deliverables": ["Voice input component", "Audio recording"],
+          "adr_reference": null
         },
         {
           "id": "3.6",
-          "title": "實作語音輸入介面",
+          "title": "實作聊天訊息展示",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 5,
+          "dependencies": ["3.2"],
+          "deliverables": ["Chat interface component", "Message display"],
+          "adr_reference": null
         },
         {
           "id": "3.7",
-          "title": "實作聊天訊息展示",
-          "status": "pending",
-          "assigned_to": "claude"
-        },
-        {
-          "id": "3.8",
           "title": "整合前端元件與狀態管理",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "dependencies": ["3.4", "3.5", "3.6"],
+          "deliverables": ["React Context setup", "State management"],
+          "adr_reference": null
         }
       ]
     },
@@ -155,93 +271,147 @@
       "phase": "Phase 4: 後端開發",
       "type": "development",
       "parallel_with": "Phase 3",
+      "status": "pending",
+      "progress": 0,
+      "completed_hours": 0,
+      "total_hours": 28,
+      "estimated_start_date": "2025-10-19",
+      "estimated_end_date": "2025-10-24",
       "tasks": [
         {
           "id": "4.1",
-          "title": "建立 Python/FastAPI 專案",
+          "title": "建立 API Routes 基礎",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 3,
+          "dependencies": ["2.6"],
+          "deliverables": ["API route structure", "Middleware setup"],
+          "adr_reference": ["ADR-003"]
         },
         {
           "id": "4.2",
           "title": "整合 OpenAI Whisper API",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 6,
+          "dependencies": ["4.1"],
+          "deliverables": ["/api/stt endpoint", "Audio upload handling"],
+          "adr_reference": ["ADR-004"]
         },
         {
           "id": "4.3",
           "title": "整合 OpenAI GPT API",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 6,
+          "dependencies": ["4.1"],
+          "deliverables": ["/api/chat endpoint", "Conversation history"],
+          "adr_reference": ["ADR-004"]
         },
         {
           "id": "4.4",
           "title": "整合 OpenAI TTS API",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 6,
+          "dependencies": ["4.1"],
+          "deliverables": ["/api/tts endpoint", "Audio generation"],
+          "adr_reference": ["ADR-004"]
         },
         {
           "id": "4.5",
-          "title": "實作 WebSocket 伺服器",
+          "title": "實作錯誤處理與日誌",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "dependencies": ["4.2", "4.3", "4.4"],
+          "deliverables": ["Error handling middleware", "Logging system"],
+          "adr_reference": null
         },
         {
           "id": "4.6",
-          "title": "實作音訊處理管線",
+          "title": "實作速率限制與安全",
           "status": "pending",
-          "assigned_to": "claude"
-        },
-        {
-          "id": "4.7",
-          "title": "實作錯誤處理與日誌",
-          "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 3,
+          "dependencies": ["4.5"],
+          "deliverables": ["Rate limiting", "Input validation"],
+          "adr_reference": null
         }
       ]
     },
     {
       "phase": "Phase 5: 整合測試與優化",
       "type": "testing",
+      "status": "pending",
+      "progress": 0,
+      "completed_hours": 0,
+      "total_hours": 24,
+      "estimated_start_date": "2025-10-24",
+      "estimated_end_date": "2025-10-26",
       "tasks": [
         {
           "id": "5.1",
           "title": "前後端整合測試",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 6,
+          "dependencies": ["3.7", "4.6"],
+          "deliverables": ["Integration tests", "Test report"],
+          "adr_reference": null
         },
         {
           "id": "5.2",
           "title": "即時效能優化",
           "status": "pending",
           "assigned_to": "deployment-operations-engineer",
-          "subagent": true
+          "subagent": true,
+          "estimated_hours": 4,
+          "dependencies": ["5.1"],
+          "deliverables": ["Performance optimizations", "Metrics"],
+          "adr_reference": null
         },
         {
           "id": "5.3",
           "title": "3D 視覺化效能優化",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "dependencies": ["5.1"],
+          "deliverables": ["Optimized 3D rendering", "60 FPS target"],
+          "adr_reference": ["ADR-002"]
         },
         {
           "id": "5.4",
           "title": "音訊延遲優化",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 3,
+          "dependencies": ["5.1"],
+          "deliverables": ["<100ms latency", "Audio optimization"],
+          "adr_reference": null
         },
         {
           "id": "5.5",
           "title": "E2E 使用者流程測試",
           "status": "pending",
           "assigned_to": "e2e-validation-specialist",
-          "subagent": true
+          "subagent": true,
+          "estimated_hours": 5,
+          "dependencies": ["5.1"],
+          "deliverables": ["E2E test suite", "BDD scenario execution"],
+          "adr_reference": null
         },
         {
           "id": "5.6",
           "title": "安全性檢查",
           "status": "pending",
           "assigned_to": "security-infrastructure-auditor",
-          "subagent": true
+          "subagent": true,
+          "estimated_hours": 2,
+          "dependencies": ["5.1"],
+          "deliverables": ["Security audit report", "Vulnerability fixes"],
+          "adr_reference": null
         }
       ]
     },
@@ -249,46 +419,146 @@
       "phase": "Phase 6: 部署準備",
       "type": "deployment",
       "requires_human_review": true,
+      "status": "pending",
+      "progress": 0,
+      "completed_hours": 0,
+      "total_hours": 14,
+      "estimated_start_date": "2025-10-26",
+      "estimated_end_date": "2025-10-28",
       "tasks": [
         {
           "id": "6.1",
           "title": "建立 Vercel 部署配置",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 2,
+          "dependencies": ["5.6"],
+          "deliverables": ["vercel.json", "Environment setup"],
+          "adr_reference": ["ADR-005"]
         },
         {
           "id": "6.2",
           "title": "設置環境變數管理",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 2,
+          "dependencies": ["6.1"],
+          "deliverables": ["Environment variables configuration"],
+          "adr_reference": ["ADR-005"]
         },
         {
           "id": "6.3",
           "title": "建立 CI/CD 管線",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 4,
+          "dependencies": ["6.2"],
+          "deliverables": ["GitHub Actions workflow", "Auto-deploy"],
+          "adr_reference": ["ADR-005"]
         },
         {
           "id": "6.4",
           "title": "撰寫部署文檔",
           "status": "pending",
           "assigned_to": "documentation-specialist",
-          "subagent": true
+          "subagent": true,
+          "estimated_hours": 3,
+          "dependencies": ["6.3"],
+          "deliverables": ["Deployment guide", "Operations manual"],
+          "adr_reference": null
         },
         {
           "id": "6.5",
           "title": "首次部署到 Vercel",
           "status": "pending",
-          "assigned_to": "claude"
+          "assigned_to": "claude",
+          "estimated_hours": 3,
+          "dependencies": ["6.3", "6.4"],
+          "deliverables": ["Production deployment", "Deployment verification"],
+          "adr_reference": ["ADR-005"]
         },
         {
           "id": "6.6",
           "title": "【駕駛員審查點】PM 最終部署批准",
           "status": "pending",
           "type": "human_review",
-          "assigned_to": "PM"
+          "assigned_to": "PM",
+          "estimated_hours": 0,
+          "dependencies": ["6.5"],
+          "deliverables": ["Final approval", "Go-live clearance"],
+          "adr_reference": null
         }
       ]
     }
-  ]
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "name": "Phase 1 Complete - Documentation Ready",
+      "date": "2025-10-17",
+      "status": "completed",
+      "deliverables": ["PRD", "5 ADRs", "BDD Scenarios"]
+    },
+    {
+      "id": "M2",
+      "name": "Phase 2 Complete - Architecture Defined",
+      "date": "2025-10-19",
+      "status": "in_progress",
+      "deliverables": ["System Architecture", "API Specs", "Data Models"]
+    },
+    {
+      "id": "M3",
+      "name": "MVP Core Features Complete",
+      "date": "2025-10-24",
+      "status": "pending",
+      "deliverables": ["Working frontend + backend", "All 5 core features"]
+    },
+    {
+      "id": "M4",
+      "name": "Testing & QA Complete",
+      "date": "2025-10-26",
+      "status": "pending",
+      "deliverables": ["All tests passing", "Performance targets met"]
+    },
+    {
+      "id": "M5",
+      "name": "Production Deployment",
+      "date": "2025-10-28",
+      "status": "pending",
+      "deliverables": ["Live on Vercel", "Monitoring active"]
+    }
+  ],
+  "risks": [
+    {
+      "id": "R1",
+      "description": "API 成本超支",
+      "severity": "medium",
+      "probability": "low",
+      "mitigation": "Daily budget monitoring, caching strategy",
+      "owner": "claude"
+    },
+    {
+      "id": "R2",
+      "description": "3D 效能問題",
+      "severity": "medium",
+      "probability": "medium",
+      "mitigation": "Early performance testing, 2D fallback",
+      "owner": "claude"
+    },
+    {
+      "id": "R3",
+      "description": "OpenAI API 服務中斷",
+      "severity": "high",
+      "probability": "low",
+      "mitigation": "Fallback to text mode, error handling",
+      "owner": "claude"
+    }
+  ],
+  "quality_metrics": {
+    "code_coverage": {"target": 70, "current": 0},
+    "lighthouse_score": {"target": 80, "current": 0},
+    "api_response_time": {"target": 10000, "current": 0},
+    "fps_desktop": {"target": 60, "current": 0},
+    "fps_mobile": {"target": 30, "current": 0}
+  }
 }
