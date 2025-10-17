@@ -1,0 +1,39 @@
+{
+  "project_name": "ai-audio-chat-visualizer",
+  "description": "透過 3D 視覺化增強 AI 語音互動的沉浸式體驗",
+  "version": "0.1.0",
+  "created_at": "2025-10-17",
+  "taskmaster_version": "2.0",
+  "mode": "MEDIUM",
+  "tech_stack": {
+    "frontend": "Next.js + React + TypeScript + Three.js",
+    "backend": "Python + FastAPI",
+    "deployment": "Vercel",
+    "ai_services": "OpenAI APIs (Whisper, GPT, TTS)"
+  },
+  "mvp_features": [
+    "3D 音訊視覺化展示 (Three.js)",
+    "OpenAI 語音轉文字 (Whisper API)",
+    "OpenAI 聊天回應 (GPT API)",
+    "文字轉語音輸出 (TTS API)",
+    "即時互動介面 (React/Next.js)"
+  ],
+  "success_criteria": "使用者體驗優先 - 新奇、有趣且流暢的互動體驗",
+  "timeline": "2-3 週 (快速原型模式)",
+  "hub_strategy": "HYBRID",
+  "loaded_templates": [
+    "01_project_brief_and_prd.md",
+    "01_adr_template.md",
+    "02_bdd_scenarios_guide.md",
+    "05_architecture_and_design_document.md",
+    "04_api_design_specification_template.md",
+    "08_project_structure_guide.md",
+    "07_module_specification_and_tests.md",
+    "13_security_and_readiness_checklists.md"
+  ],
+  "review_checkpoints": [
+    "Phase 1: 文檔完成後 - PM 審查",
+    "Phase 2: 架構設計完成 - PM 審查",
+    "Phase 6: 部署前 - PM 最終批准"
+  ]
+}

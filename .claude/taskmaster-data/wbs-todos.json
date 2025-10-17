@@ -1,0 +1,294 @@
+{
+  "wbs_version": "1.0",
+  "total_tasks": 39,
+  "completed": 1,
+  "in_progress": 0,
+  "pending": 38,
+  "phases": [
+    {
+      "phase": "Phase 1: 專案設置與文檔",
+      "type": "documentation",
+      "requires_human_review": true,
+      "tasks": [
+        {
+          "id": "1.1",
+          "title": "建立專案基礎結構",
+          "status": "completed",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "1.2",
+          "title": "初始化 Git 與 GitHub 儲存庫",
+          "status": "in_progress",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "1.3",
+          "title": "生成 PRD (產品需求文檔)",
+          "status": "pending",
+          "assigned_to": "documentation-specialist",
+          "subagent": true
+        },
+        {
+          "id": "1.4",
+          "title": "撰寫技術架構決策記錄 (ADR)",
+          "status": "pending",
+          "assigned_to": "documentation-specialist",
+          "subagent": true
+        },
+        {
+          "id": "1.5",
+          "title": "定義 BDD 使用者場景",
+          "status": "pending",
+          "assigned_to": "e2e-validation-specialist",
+          "subagent": true
+        },
+        {
+          "id": "1.6",
+          "title": "【駕駛員審查點】PM 確認文檔品質",
+          "status": "pending",
+          "type": "human_review",
+          "assigned_to": "PM"
+        }
+      ]
+    },
+    {
+      "phase": "Phase 2: 架構設計與規格",
+      "type": "documentation",
+      "requires_human_review": true,
+      "tasks": [
+        {
+          "id": "2.1",
+          "title": "設計系統架構圖",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "2.2",
+          "title": "設計 API 規格 (WebSocket + REST)",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "2.3",
+          "title": "規劃前端專案結構",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "2.4",
+          "title": "規劃後端專案結構",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "2.5",
+          "title": "定義資料模型與狀態管理",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "2.6",
+          "title": "【駕駛員審查點】PM 確認架構設計",
+          "status": "pending",
+          "type": "human_review",
+          "assigned_to": "PM"
+        }
+      ]
+    },
+    {
+      "phase": "Phase 3: 前端開發",
+      "type": "development",
+      "parallel_with": "Phase 4",
+      "tasks": [
+        {
+          "id": "3.1",
+          "title": "建立 Next.js 專案骨架",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "3.2",
+          "title": "設置 TypeScript 與 ESLint",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "3.3",
+          "title": "實作 Three.js 3D 場景基礎",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "3.4",
+          "title": "實作音訊視覺化元件",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "3.5",
+          "title": "實作 WebSocket 客戶端",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "3.6",
+          "title": "實作語音輸入介面",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "3.7",
+          "title": "實作聊天訊息展示",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "3.8",
+          "title": "整合前端元件與狀態管理",
+          "status": "pending",
+          "assigned_to": "claude"
+        }
+      ]
+    },
+    {
+      "phase": "Phase 4: 後端開發",
+      "type": "development",
+      "parallel_with": "Phase 3",
+      "tasks": [
+        {
+          "id": "4.1",
+          "title": "建立 Python/FastAPI 專案",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "4.2",
+          "title": "整合 OpenAI Whisper API",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "4.3",
+          "title": "整合 OpenAI GPT API",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "4.4",
+          "title": "整合 OpenAI TTS API",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "4.5",
+          "title": "實作 WebSocket 伺服器",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "4.6",
+          "title": "實作音訊處理管線",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "4.7",
+          "title": "實作錯誤處理與日誌",
+          "status": "pending",
+          "assigned_to": "claude"
+        }
+      ]
+    },
+    {
+      "phase": "Phase 5: 整合測試與優化",
+      "type": "testing",
+      "tasks": [
+        {
+          "id": "5.1",
+          "title": "前後端整合測試",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "5.2",
+          "title": "即時效能優化",
+          "status": "pending",
+          "assigned_to": "deployment-operations-engineer",
+          "subagent": true
+        },
+        {
+          "id": "5.3",
+          "title": "3D 視覺化效能優化",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "5.4",
+          "title": "音訊延遲優化",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "5.5",
+          "title": "E2E 使用者流程測試",
+          "status": "pending",
+          "assigned_to": "e2e-validation-specialist",
+          "subagent": true
+        },
+        {
+          "id": "5.6",
+          "title": "安全性檢查",
+          "status": "pending",
+          "assigned_to": "security-infrastructure-auditor",
+          "subagent": true
+        }
+      ]
+    },
+    {
+      "phase": "Phase 6: 部署準備",
+      "type": "deployment",
+      "requires_human_review": true,
+      "tasks": [
+        {
+          "id": "6.1",
+          "title": "建立 Vercel 部署配置",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "6.2",
+          "title": "設置環境變數管理",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "6.3",
+          "title": "建立 CI/CD 管線",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "6.4",
+          "title": "撰寫部署文檔",
+          "status": "pending",
+          "assigned_to": "documentation-specialist",
+          "subagent": true
+        },
+        {
+          "id": "6.5",
+          "title": "首次部署到 Vercel",
+          "status": "pending",
+          "assigned_to": "claude"
+        },
+        {
+          "id": "6.6",
+          "title": "【駕駛員審查點】PM 最終部署批准",
+          "status": "pending",
+          "type": "human_review",
+          "assigned_to": "PM"
+        }
+      ]
+    }
+  ]
+}
