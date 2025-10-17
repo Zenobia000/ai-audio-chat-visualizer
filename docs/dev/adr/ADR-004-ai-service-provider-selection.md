@@ -1,9 +1,16 @@
 # ADR-004: AI 服務提供商選擇
 
-**狀態**: Accepted
-**日期**: 2025-10-17
-**決策者**: Technical Team
-**標籤**: #ai #openai #llm #stt #tts
+---
+
+**狀態 (Status):** `已接受 (Accepted)`
+
+**決策者 (Deciders):** `Technical Team`
+
+**日期 (Date):** `2025-10-17`
+
+**技術顧問 (Consulted - 選填):** `N/A`
+
+**受影響團隊 (Informed - 選填):** `All Development Team`
 
 ---
 
