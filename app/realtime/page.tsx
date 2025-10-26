@@ -17,7 +17,8 @@ export default function RealtimePage() {
     return () => {
       disconnect();
     };
-  }, [connect, disconnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">

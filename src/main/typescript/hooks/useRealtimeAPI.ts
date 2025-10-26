@@ -34,63 +34,36 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
   /**
-   * Connect to OpenAI Realtime API WebSocket
+   * Connect to OpenAI Realtime API WebSocket via local proxy
    */
   const connect = useCallback(async () => {
     try {
-      // Get API key from environment
-      const response = await fetch('/api/realtime/token');
-      if (!response.ok) {
-        throw new Error('Failed to get API token');
-      }
-      const { token } = await response.json();
+      // Connect to local WebSocket proxy server
+      // The proxy handles authentication and connection to OpenAI
+      const PROXY_URL = process.env.NEXT_PUBLIC_REALTIME_PROXY_URL || 'ws://localhost:8081';
 
-      if (!token) {
-        throw new Error('API token is missing');
-      }
+      console.log(`[Realtime] Connecting to proxy: ${PROXY_URL}`);
 
-      // Create WebSocket connection with proper headers
-      const url = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`;
-      const ws = new WebSocket(url, [
-        'realtime',
-        `openai-insecure-api-key.${token}`,
-        `openai-beta.realtime-v1`,
-      ]);
+      const ws = new WebSocket(PROXY_URL);
 
       ws.onopen = () => {
-        console.log('[Realtime] WebSocket connected successfully');
+        console.log('[Realtime] Connected to proxy server successfully');
+        console.log('[Realtime] Waiting for OpenAI connection...');
         setState((prev) => ({ ...prev, isConnected: true, error: null }));
 
-        // Send initial configuration
-        const config_message = {
-          type: 'session.update',
-          session: {
-            modalities: ['text', 'audio'],
-            instructions: 'You are a helpful AI assistant. Respond naturally and conversationally in Traditional Chinese.',
-            voice: config.voice || 'alloy',
-            input_audio_format: 'pcm16',
-            output_audio_format: 'pcm16',
-            input_audio_transcription: {
-              model: 'whisper-1',
-            },
-            turn_detection: {
-              type: 'server_vad',
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 500,
-            },
-            temperature: config.temperature || 0.8,
-            max_response_output_tokens: config.maxResponseTokens || 4096,
-          },
-        };
-
-        console.log('[Realtime] Sending session config:', config_message);
-        ws.send(JSON.stringify(config_message));
+        // Note: Session configuration is handled by the proxy server
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = async (event) => {
         try {
-          const message = JSON.parse(event.data);
+          let data = event.data;
+
+          // If data is a Blob, convert to text first
+          if (data instanceof Blob) {
+            data = await data.text();
+          }
+
+          const message = JSON.parse(data);
           console.log('[Realtime] Received message:', message.type);
           handleRealtimeEvent(message);
         } catch (error) {
@@ -99,15 +72,9 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       };
 
       ws.onerror = (error) => {
-        // Note: WebSocket errors don't provide detailed info in browsers
         console.error('[Realtime] WebSocket error occurred');
         console.error('[Realtime] Error details:', error);
-
-        setState((prev) => ({
-          ...prev,
-          error: 'WebSocket 連接失敗。請確認 API key 設定正確並刷新頁面重試。',
-          isConnected: false,
-        }));
+        // Don't set error state here - wait for onclose to determine if connection truly failed
       };
 
       ws.onclose = (event) => {
@@ -117,18 +84,19 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
         console.log('[Realtime] Was clean:', event.wasClean);
 
         let errorMessage = '';
+        // Only set error for abnormal closures
         if (event.code === 1006) {
           errorMessage = '連接異常關閉。可能是 API key 無效或網絡問題。';
         } else if (event.code === 1008) {
           errorMessage = '連接被拒絕。請確認 API key 有效。';
-        } else if (!event.wasClean) {
+        } else if (!event.wasClean && event.code !== 1001 && event.code !== 1005) {
           errorMessage = `連接意外斷開 (code: ${event.code})`;
         }
 
         setState((prev) => ({
           ...prev,
           isConnected: false,
-          error: errorMessage || prev.error,
+          error: errorMessage || null, // Clear previous errors if closing normally
         }));
       };
 
