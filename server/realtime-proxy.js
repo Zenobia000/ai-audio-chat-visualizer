@@ -79,6 +79,11 @@ wss.on('connection', (clientWs) => {
         const message = JSON.parse(data.toString());
         console.log(`[Proxy] OpenAI → Client: ${message.type}`);
 
+        // Log error details for debugging
+        if (message.type === 'error') {
+          console.error('[Proxy] OpenAI Error Details:', JSON.stringify(message.error, null, 2));
+        }
+
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.send(data);
         }

@@ -287,8 +287,14 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
         break;
 
       case 'error':
-        console.error('[Realtime] Error:', event.error);
-        setState((prev) => ({ ...prev, error: event.error.message }));
+        console.error('[Realtime] Error event received:', event);
+        console.error('[Realtime] Error details:', JSON.stringify(event.error, null, 2));
+
+        const errorMessage = event.error?.message
+          || event.error?.type
+          || 'Unknown error occurred';
+
+        setState((prev) => ({ ...prev, error: errorMessage }));
         break;
 
       default:
