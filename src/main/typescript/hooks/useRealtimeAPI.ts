@@ -366,26 +366,54 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
         offset += chunk.length;
       }
 
+      console.log(`[Realtime v2] Combined audio length: ${combinedAudio.length} samples`);
+      console.log(`[Realtime v2] Audio duration: ${(combinedAudio.length / 24000).toFixed(2)}s`);
+
+      // Validate audio data
+      if (combinedAudio.length === 0) {
+        console.error('[Realtime v2] ERROR: No audio data recorded!');
+        setState((prev) => ({
+          ...prev,
+          isRecording: false,
+          error: 'No audio data captured. Please try again.',
+        }));
+        recordedChunksRef.current = [];
+        return;
+      }
+
+      // Check if audio has actual signal (not just silence)
+      const maxAmplitude = Math.max(...Array.from(combinedAudio).map(Math.abs));
+      console.log(`[Realtime v2] Max amplitude: ${maxAmplitude.toFixed(4)}`);
+
+      if (maxAmplitude < 0.001) {
+        console.warn('[Realtime v2] WARNING: Audio appears to be silent (max amplitude < 0.001)');
+      }
+
       // Convert to PCM16 and Base64 (same as reference project)
       const base64Audio = convertFloat32ToBase64(combinedAudio);
+      console.log(`[Realtime v2] Base64 audio length: ${base64Audio.length} characters`);
+
+      // Log first few characters for debugging
+      console.log(`[Realtime v2] Base64 preview: ${base64Audio.substring(0, 50)}...`);
 
       // Send as conversation item (reference project approach)
       console.log('[Realtime v2] Sending conversation item...');
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'conversation.item.create',
-          item: {
-            type: 'message',
-            role: 'user',
-            content: [
-              {
-                type: 'input_audio',
-                audio: base64Audio,
-              },
-            ],
-          },
-        })
-      );
+      const conversationItem = {
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'user',
+          content: [
+            {
+              type: 'input_audio',
+              audio: base64Audio,
+            },
+          ],
+        },
+      };
+
+      console.log('[Realtime v2] Payload structure:', JSON.stringify(conversationItem, null, 2).substring(0, 200) + '...');
+      wsRef.current.send(JSON.stringify(conversationItem));
 
       // Request response
       console.log('[Realtime v2] Requesting AI response...');
@@ -393,6 +421,13 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
 
       // Clear recorded chunks
       recordedChunksRef.current = [];
+    } else if (recordedChunksRef.current.length === 0) {
+      console.warn('[Realtime v2] No audio chunks to send');
+      setState((prev) => ({
+        ...prev,
+        isRecording: false,
+        error: 'Recording too short. Please speak longer.',
+      }));
     }
 
     setState((prev) => ({ ...prev, isRecording: false }));
