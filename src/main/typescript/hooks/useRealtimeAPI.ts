@@ -177,14 +177,27 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       const audioContext = new AudioContext({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
 
+      console.log('[Realtime] AudioContext sample rate:', audioContext.sampleRate);
+
       const source = audioContext.createMediaStreamSource(stream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      let audioChunkCount = 0;
 
       processor.onaudioprocess = (e) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           const inputData = e.inputBuffer.getChannelData(0);
           const pcm16 = convertFloat32ToPCM16(inputData);
           const base64Audio = arrayBufferToBase64(pcm16);
+
+          if (audioChunkCount === 0) {
+            console.log('[Realtime] First audio chunk:', {
+              samples: inputData.length,
+              pcm16Size: pcm16.byteLength,
+              base64Length: base64Audio.length,
+            });
+          }
+          audioChunkCount++;
 
           // Send audio chunk to Realtime API
           wsRef.current.send(
@@ -311,12 +324,19 @@ function convertFloat32ToPCM16(float32Array: Float32Array): ArrayBuffer {
 
 /**
  * Convert ArrayBuffer to Base64
+ * Using proper binary-to-base64 conversion for PCM16 audio data
  */
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
   let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+
+  // Process in chunks to avoid stack overflow with large arrays
+  const chunkSize = 8192;
+  for (let i = 0; i < len; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, len));
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
   }
+
   return btoa(binary);
 }
