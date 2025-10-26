@@ -150,6 +150,8 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioQueueRef = useRef<AudioStreamQueue | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
   /**
    * Connect to OpenAI Realtime API WebSocket via local proxy
@@ -299,6 +301,12 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
    */
   const startRecording = useCallback(async () => {
     try {
+      // Don't start if already recording
+      if (mediaStreamRef.current || audioContextRef.current) {
+        console.warn('[Realtime] Already recording');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
@@ -309,6 +317,10 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
 
       const source = audioContext.createMediaStreamSource(stream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      // Save references for cleanup
+      sourceRef.current = source;
+      processorRef.current = processor;
 
       let audioChunkCount = 0;
 
@@ -340,6 +352,7 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       source.connect(processor);
       processor.connect(audioContext.destination);
 
+      console.log('[Realtime] Recording started');
       setState((prev) => ({ ...prev, isRecording: true }));
     } catch (error) {
       console.error('[Realtime] Failed to start recording:', error);
@@ -354,24 +367,38 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
    * Stop recording audio
    */
   const stopRecording = useCallback(() => {
+    console.log('[Realtime] Stopping recording...');
+
+    // Step 1: Disconnect audio nodes first to stop processing
+    if (sourceRef.current && processorRef.current) {
+      try {
+        sourceRef.current.disconnect();
+        processorRef.current.disconnect();
+        console.log('[Realtime] Audio nodes disconnected');
+      } catch (error) {
+        console.warn('[Realtime] Error disconnecting nodes:', error);
+      }
+      sourceRef.current = null;
+      processorRef.current = null;
+    }
+
+    // Step 2: Stop media stream
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
+      console.log('[Realtime] Media stream stopped');
     }
 
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    // Commit audio buffer to trigger AI response
+    // Step 3: Commit audio buffer and request response
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log('[Realtime] Committing audio buffer...');
       wsRef.current.send(
         JSON.stringify({
           type: 'input_audio_buffer.commit',
         })
       );
 
+      console.log('[Realtime] Requesting AI response...');
       wsRef.current.send(
         JSON.stringify({
           type: 'response.create',
@@ -379,6 +406,15 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       );
     }
 
+    // Step 4: Close audio context (async cleanup)
+    if (audioContextRef.current) {
+      audioContextRef.current.close().then(() => {
+        console.log('[Realtime] AudioContext closed');
+      });
+      audioContextRef.current = null;
+    }
+
+    console.log('[Realtime] Recording stopped');
     setState((prev) => ({ ...prev, isRecording: false }));
   }, []);
 
@@ -386,16 +422,25 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
    * Disconnect from Realtime API
    */
   const disconnect = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
+    // Disconnect audio nodes
+    if (sourceRef.current && processorRef.current) {
+      try {
+        sourceRef.current.disconnect();
+        processorRef.current.disconnect();
+      } catch (error) {
+        // Ignore errors during cleanup
+      }
+      sourceRef.current = null;
+      processorRef.current = null;
     }
 
+    // Stop media stream
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
 
+    // Close audio context
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
@@ -405,6 +450,12 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
     if (audioQueueRef.current) {
       audioQueueRef.current.close();
       audioQueueRef.current = null;
+    }
+
+    // Close WebSocket
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
 
     setState({
