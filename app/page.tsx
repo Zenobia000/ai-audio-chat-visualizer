@@ -241,8 +241,19 @@ export default function Home() {
             AI Audio Chat Visualizer
           </h1>
           <p className="text-gray-600">
-            MVP v1.0 - 語音對話原型
+            MVP v1.0 - 語音對話原型（傳統模式）
           </p>
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700 mb-2">
+              ⚡ 新功能：極速語音對話模式已推出！
+            </p>
+            <a
+              href="/realtime"
+              className="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              🚀 切換到 Realtime 模式 (延遲 &lt; 1 秒)
+            </a>
+          </div>
         </div>
 
         {/* Microphone Button */}
