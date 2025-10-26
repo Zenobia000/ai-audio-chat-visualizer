@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
@@ -8,14 +8,38 @@ export default function Home() {
   const [transcript, setTranscript] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [error, setError] = useState('');
+  const [volumeLevel, setVolumeLevel] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingStartTimeRef = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const volumeSamplesRef = useRef<number[]>([]);
 
   const startRecording = async () => {
     try {
       setError('');
+      setVolumeLevel(0);
+      volumeSamplesRef.current = [];
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Setup Audio Context for volume analysis
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+
+      // Start volume monitoring
+      monitorVolume();
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm',
@@ -31,19 +55,86 @@ export default function Home() {
       };
 
       mediaRecorder.onstop = async () => {
+        // Stop volume monitoring
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+
+        // Close audio context
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
+        }
+
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+
+        // Calculate recording duration
+        const recordingDuration = Date.now() - recordingStartTimeRef.current;
+
+        // Validate recording (minimum 0.5 seconds)
+        if (recordingDuration < 500) {
+          setError('錄音時間太短，請按住至少 0.5 秒後再說話');
+          stream.getTracks().forEach(track => track.stop());
+          setVolumeLevel(0);
+          return;
+        }
+
+        // Check average volume (threshold: 0.01)
+        const avgVolume = volumeSamplesRef.current.reduce((a, b) => a + b, 0) / volumeSamplesRef.current.length;
+        if (avgVolume < 0.01) {
+          setError('未偵測到語音，請提高音量或靠近麥克風說話');
+          stream.getTracks().forEach(track => track.stop());
+          setVolumeLevel(0);
+          return;
+        }
+
+        if (audioBlob.size < 5000) {
+          setError('音訊資料不足，請確認麥克風正常運作');
+          stream.getTracks().forEach(track => track.stop());
+          setVolumeLevel(0);
+          return;
+        }
+
         await processAudio(audioBlob);
 
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
+        setVolumeLevel(0);
       };
 
       mediaRecorder.start();
+      recordingStartTimeRef.current = Date.now();
       setIsRecording(true);
     } catch (err) {
       console.error('Failed to start recording:', err);
       setError('無法啟動麥克風，請確認權限設定');
     }
+  };
+
+  const monitorVolume = () => {
+    if (!analyserRef.current) return;
+
+    const analyser = analyserRef.current;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    const checkVolume = () => {
+      analyser.getByteFrequencyData(dataArray);
+
+      // Calculate RMS (Root Mean Square) volume
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i] * dataArray[i];
+      }
+      const rms = Math.sqrt(sum / dataArray.length) / 255;
+
+      setVolumeLevel(rms);
+      volumeSamplesRef.current.push(rms);
+
+      animationFrameRef.current = requestAnimationFrame(checkVolume);
+    };
+
+    checkVolume();
   };
 
   const stopRecording = () => {
@@ -52,6 +143,35 @@ export default function Home() {
       setIsRecording(false);
     }
   };
+
+  // Keyboard shortcut for recording (Space key)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent recording if already processing or recording
+      if (isProcessing || isRecording) return;
+
+      // Use Space key to start recording
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        startRecording();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        stopRecording();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isRecording, isProcessing]);
 
   const processAudio = async (audioBlob: Blob) => {
     setIsProcessing(true);
@@ -126,7 +246,7 @@ export default function Home() {
         </div>
 
         {/* Microphone Button */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-4">
           <button
             onMouseDown={startRecording}
             onMouseUp={stopRecording}
@@ -145,6 +265,27 @@ export default function Home() {
           >
             {isRecording ? '🎤 錄音中' : isProcessing ? '⏳ 處理中' : '🎤 按住說話'}
           </button>
+
+          {/* Volume Indicator */}
+          {isRecording && (
+            <div className="w-64 space-y-2">
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>音量</span>
+                <span>{(volumeLevel * 100).toFixed(0)}%</span>
+              </div>
+              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-100 ${
+                    volumeLevel > 0.01 ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}
+                  style={{ width: `${Math.min(volumeLevel * 100, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-center text-gray-500">
+                {volumeLevel < 0.01 ? '⚠️ 音量過低，請提高音量' : '✅ 音量正常'}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Status & Messages */}
@@ -171,8 +312,10 @@ export default function Home() {
         </div>
 
         {/* Instructions */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-gray-500 space-y-2">
           <p>💡 按住麥克風按鈕說話，放開後等待 AI 回應</p>
+          <p>⌨️ 快捷鍵：按住 <kbd className="px-2 py-1 bg-gray-200 rounded text-gray-700 font-mono">空白鍵</kbd> 開始錄音</p>
+          <p>🎤 即時音量指示器會顯示您的說話音量</p>
           <p className="mt-2">🎯 目標：驗證語音對話核心流程</p>
         </div>
       </div>
