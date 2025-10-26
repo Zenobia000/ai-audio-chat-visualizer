@@ -5,6 +5,123 @@ import { useEffect, useRef, useState, useCallback } from 'react';
  * Handles real-time audio streaming with minimal latency
  */
 
+/**
+ * Audio Stream Queue for smooth playback
+ * Manages continuous audio chunks to prevent gaps and stuttering
+ */
+class AudioStreamQueue {
+  private queue: AudioBuffer[] = [];
+  private isPlaying = false;
+  private audioContext: AudioContext;
+  private currentSource: AudioBufferSourceNode | null = null;
+  private nextStartTime = 0;
+  private onQueueEmpty?: () => void;
+
+  constructor(sampleRate = 24000, onQueueEmpty?: () => void) {
+    this.audioContext = new AudioContext({ sampleRate });
+    this.onQueueEmpty = onQueueEmpty;
+  }
+
+  /**
+   * Add audio chunk to queue and play if not already playing
+   */
+  async enqueue(base64Audio: string): Promise<void> {
+    try {
+      // Convert Base64 to PCM16
+      const binaryString = atob(base64Audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Convert PCM16 to Float32
+      const pcm16 = new Int16Array(bytes.buffer);
+      const float32 = new Float32Array(pcm16.length);
+      for (let i = 0; i < pcm16.length; i++) {
+        float32[i] = pcm16[i] / 32768.0;
+      }
+
+      // Create AudioBuffer
+      const audioBuffer = this.audioContext.createBuffer(
+        1, // mono
+        float32.length,
+        this.audioContext.sampleRate
+      );
+      audioBuffer.getChannelData(0).set(float32);
+
+      this.queue.push(audioBuffer);
+
+      if (!this.isPlaying) {
+        this.playNext();
+      }
+    } catch (error) {
+      console.error('[AudioQueue] Failed to enqueue audio:', error);
+    }
+  }
+
+  /**
+   * Play next audio chunk from queue
+   */
+  private playNext(): void {
+    if (this.queue.length === 0) {
+      this.isPlaying = false;
+      this.nextStartTime = 0;
+      // Notify that queue is empty
+      if (this.onQueueEmpty) {
+        this.onQueueEmpty();
+      }
+      return;
+    }
+
+    this.isPlaying = true;
+    const buffer = this.queue.shift()!;
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.audioContext.destination);
+
+    // Schedule playback for smooth streaming
+    const currentTime = this.audioContext.currentTime;
+    const startTime = Math.max(currentTime, this.nextStartTime);
+
+    source.start(startTime);
+    this.nextStartTime = startTime + buffer.duration;
+
+    // Schedule next chunk
+    source.onended = () => {
+      this.currentSource = null;
+      this.playNext();
+    };
+
+    this.currentSource = source;
+  }
+
+  /**
+   * Stop playback and clear queue
+   */
+  stop(): void {
+    if (this.currentSource) {
+      try {
+        this.currentSource.stop();
+      } catch (error) {
+        // Ignore if already stopped
+      }
+      this.currentSource = null;
+    }
+    this.queue = [];
+    this.isPlaying = false;
+    this.nextStartTime = 0;
+  }
+
+  /**
+   * Close audio context
+   */
+  close(): void {
+    this.stop();
+    this.audioContext.close();
+  }
+}
+
 export interface RealtimeConfig {
   model?: string;
   voice?: 'alloy' | 'echo' | 'shimmer';
@@ -32,12 +149,22 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioQueueRef = useRef<AudioStreamQueue | null>(null);
 
   /**
    * Connect to OpenAI Realtime API WebSocket via local proxy
    */
   const connect = useCallback(async () => {
     try {
+      // Initialize audio queue for playback
+      if (!audioQueueRef.current) {
+        audioQueueRef.current = new AudioStreamQueue(24000, () => {
+          // Callback when audio queue is empty (all chunks played)
+          setState((prev) => ({ ...prev, isAISpeaking: false }));
+        });
+        console.log('[Realtime] Audio queue initialized');
+      }
+
       // Connect to local WebSocket proxy server
       // The proxy handles authentication and connection to OpenAI
       const PROXY_URL = process.env.NEXT_PUBLIC_REALTIME_PROXY_URL || 'ws://localhost:8081';
@@ -149,7 +276,8 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
 
       case 'response.audio.done':
         console.log('[Realtime] Audio response complete');
-        setState((prev) => ({ ...prev, isAISpeaking: false }));
+        // Note: isAISpeaking will be set to false after queue finishes playing
+        // We don't set it here immediately to avoid premature state change
         break;
 
       case 'response.done':
@@ -273,6 +401,12 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       audioContextRef.current = null;
     }
 
+    // Clean up audio queue
+    if (audioQueueRef.current) {
+      audioQueueRef.current.close();
+      audioQueueRef.current = null;
+    }
+
     setState({
       isConnected: false,
       isRecording: false,
@@ -285,11 +419,14 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
   /**
    * Play audio chunk from AI response
    */
-  const playAudioChunk = (base64Audio: string) => {
-    // This will be implemented to play PCM16 audio chunks
-    // For now, we'll log it
-    console.log('[Realtime] Received audio chunk');
-    setState((prev) => ({ ...prev, isAISpeaking: true }));
+  const playAudioChunk = async (base64Audio: string) => {
+    if (audioQueueRef.current) {
+      console.log('[Realtime] Playing audio chunk');
+      await audioQueueRef.current.enqueue(base64Audio);
+      setState((prev) => ({ ...prev, isAISpeaking: true }));
+    } else {
+      console.warn('[Realtime] Audio queue not initialized');
+    }
   };
 
   /**
