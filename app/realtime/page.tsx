@@ -18,40 +18,32 @@ export default function RealtimePage() {
       disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <div className="max-w-2xl w-full space-y-8">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="max-w-xl w-full space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">
-            AI Realtime Voice Chat
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            AI 語音對話
           </h1>
-          <p className="text-gray-600">
-            極低延遲語音對話 (&lt; 1 秒) - Powered by GPT-4o Realtime API
+          <p className="text-gray-600 text-sm sm:text-base">
+            按住按鈕說話，AI 即時回應
           </p>
-          <div className="mt-4">
-            <Link
-              href="/"
-              className="text-blue-500 hover:underline text-sm"
-            >
-              ← 返回傳統模式（REST API）
-            </Link>
-          </div>
         </div>
 
         {/* Connection Status */}
-        <div className="text-center">
+        <div className="flex justify-center">
           {state.isConnected ? (
-            <div className="flex items-center justify-center gap-2 text-green-600">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-              <span>已連接到 Realtime API</span>
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span>已連接</span>
             </div>
           ) : (
-            <div className="flex items-center justify-center gap-2 text-gray-400">
-              <div className="w-3 h-3 bg-gray-300 rounded-full" />
-              <span>正在連接...</span>
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-full text-sm">
+              <div className="w-2 h-2 bg-gray-400 rounded-full" />
+              <span>連接中...</span>
             </div>
           )}
         </div>
@@ -65,102 +57,82 @@ export default function RealtimePage() {
             onTouchEnd={stopRecording}
             disabled={!state.isConnected || state.isAISpeaking}
             className={`
-              w-32 h-32 rounded-full text-white font-bold text-lg
+              w-40 h-40 rounded-full text-white font-bold text-lg shadow-2xl
               transition-all duration-200 transform
               ${state.isRecording
-                ? 'bg-red-500 scale-110 animate-pulse'
-                : 'bg-blue-500 hover:scale-105'
+                ? 'bg-gradient-to-br from-red-500 to-red-600 scale-110 shadow-red-200'
+                : 'bg-gradient-to-br from-indigo-500 to-purple-600 hover:scale-105 hover:shadow-indigo-200'
               }
               ${!state.isConnected || state.isAISpeaking
                 ? 'opacity-50 cursor-not-allowed'
-                : 'hover:shadow-lg active:scale-95'
+                : 'hover:shadow-xl active:scale-95'
               }
             `}
           >
-            {state.isRecording
-              ? '🎤 錄音中'
-              : state.isAISpeaking
-              ? '🔊 AI 回應中'
-              : '🎤 按住說話'
-            }
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-4xl">
+                {state.isRecording ? '🎤' : state.isAISpeaking ? '🔊' : '🎤'}
+              </span>
+              <span className="text-sm">
+                {state.isRecording ? '錄音中' : state.isAISpeaking ? 'AI 回應中' : '按住說話'}
+              </span>
+            </div>
           </button>
 
-          {/* Status Indicators */}
+          {/* Status Text */}
           {state.isRecording && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span>正在錄音...</span>
-            </div>
+            <p className="text-sm text-gray-600 animate-pulse">
+              放開按鈕後 AI 會開始處理...
+            </p>
           )}
-
           {state.isAISpeaking && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span>AI 正在回應...</span>
-            </div>
+            <p className="text-sm text-gray-600 animate-pulse">
+              AI 正在回應中...
+            </p>
           )}
         </div>
 
-        {/* Status & Messages */}
-        <div className="space-y-4">
+        {/* Messages */}
+        <div className="space-y-3">
           {state.error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
-              <p className="text-red-600 font-semibold">❌ 錯誤</p>
-              <p className="text-red-600">{state.error}</p>
-              <div className="mt-3 p-3 bg-white border border-red-300 rounded text-sm">
-                <p className="font-semibold mb-2">診斷步驟：</p>
-                <ol className="list-decimal list-inside space-y-1 text-gray-700">
-                  <li>確認 .env 檔案中有 OPENAI_API_KEY</li>
-                  <li>確認 API key 有 Realtime API 存取權限</li>
-                  <li>打開瀏覽器開發者工具 (F12) 查看 Console 詳細錯誤</li>
-                  <li>檢查 Network 頁籤的 WS 連接狀態</li>
-                  <li>嘗試重新整理頁面</li>
-                </ol>
-              </div>
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-600 text-sm font-medium">連接錯誤</p>
+              <p className="text-red-600 text-sm mt-1">{state.error}</p>
             </div>
           )}
 
           {state.transcript && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">你說：</p>
-              <p className="text-gray-900">{state.transcript}</p>
+            <div className="p-4 bg-white border border-indigo-200 rounded-xl shadow-sm">
+              <p className="text-xs text-gray-500 mb-1">你說：</p>
+              <p className="text-gray-800">{state.transcript}</p>
             </div>
           )}
         </div>
 
-        {/* Instructions */}
-        <div className="text-center text-sm text-gray-500 space-y-2">
-          <p>💡 按住麥克風按鈕說話，放開後 AI 立即回應</p>
-          <p>⚡ 延遲 &lt; 1 秒（vs 傳統模式 10-15 秒）</p>
-          <p className="mt-4 text-xs">
-            🎯 使用 OpenAI GPT-4o Realtime API - 語音對語音直接處理
-          </p>
+        {/* Info Card */}
+        <div className="p-4 bg-white/80 backdrop-blur rounded-xl border border-gray-200 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700">使用說明</h3>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>• 按住麥克風按鈕開始說話</li>
+            <li>• 放開按鈕後 AI 會自動處理並回應</li>
+            <li>• 支援繁體中文對話</li>
+          </ul>
         </div>
 
-        {/* Performance Comparison */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-semibold text-center mb-4">效能對比</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="font-semibold mb-2">傳統模式（REST API）</p>
-              <ul className="space-y-1 text-gray-600">
-                <li>• STT: 2-3 秒</li>
-                <li>• Chat: 3-5 秒</li>
-                <li>• TTS: 2-3 秒</li>
-                <li className="font-bold text-red-600">總計: 10-15 秒</li>
-              </ul>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <p className="font-semibold mb-2">Realtime 模式</p>
-              <ul className="space-y-1 text-gray-600">
-                <li>• 語音對語音</li>
-                <li>• 即時處理</li>
-                <li>• 無中間轉換</li>
-                <li className="font-bold text-green-600">總計: &lt; 1 秒</li>
-              </ul>
-            </div>
-          </div>
+        {/* Footer Links */}
+        <div className="text-center text-sm">
+          <Link
+            href="/"
+            className="text-indigo-600 hover:text-indigo-800 hover:underline"
+          >
+            ← 返回首頁
+          </Link>
         </div>
+
+        {/* Tech Note */}
+        <p className="text-center text-xs text-gray-400">
+          Powered by OpenAI Realtime API
+        </p>
       </div>
     </main>
   );

@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
- * OpenAI Realtime API WebSocket Client Hook (Simplified Version)
- * Based on: https://github.com/AwaisKamran/openai-realtime-api
- *
- * Key Changes from v1:
- * - Recording: File-based approach (accumulate then send) instead of streaming
- * - Events: conversation.item.create instead of input_audio_buffer.append
- * - Simpler state management and error handling
+ * OpenAI Realtime API WebSocket Client Hook
+ * Handles real-time audio streaming with minimal latency
  */
 
 /**
  * Audio Stream Queue for smooth playback
- * (Kept from v1 - this works well)
+ * Manages continuous audio chunks to prevent gaps and stuttering
  */
 class AudioStreamQueue {
   private queue: AudioBuffer[] = [];
@@ -27,6 +22,9 @@ class AudioStreamQueue {
     this.onQueueEmpty = onQueueEmpty;
   }
 
+  /**
+   * Add audio chunk to queue and play if not already playing
+   */
   async enqueue(base64Audio: string): Promise<void> {
     try {
       // Convert Base64 to PCM16
@@ -61,10 +59,14 @@ class AudioStreamQueue {
     }
   }
 
+  /**
+   * Play next audio chunk from queue
+   */
   private playNext(): void {
     if (this.queue.length === 0) {
       this.isPlaying = false;
       this.nextStartTime = 0;
+      // Notify that queue is empty
       if (this.onQueueEmpty) {
         this.onQueueEmpty();
       }
@@ -85,6 +87,7 @@ class AudioStreamQueue {
     source.start(startTime);
     this.nextStartTime = startTime + buffer.duration;
 
+    // Schedule next chunk
     source.onended = () => {
       this.currentSource = null;
       this.playNext();
@@ -93,6 +96,9 @@ class AudioStreamQueue {
     this.currentSource = source;
   }
 
+  /**
+   * Stop playback and clear queue
+   */
   stop(): void {
     if (this.currentSource) {
       try {
@@ -107,6 +113,9 @@ class AudioStreamQueue {
     this.nextStartTime = 0;
   }
 
+  /**
+   * Close audio context
+   */
   close(): void {
     this.stop();
     this.audioContext.close();
@@ -138,14 +147,11 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
   });
 
   const wsRef = useRef<WebSocket | null>(null);
-  const audioQueueRef = useRef<AudioStreamQueue | null>(null);
-
-  // Recording state - accumulate audio chunks
-  const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioQueueRef = useRef<AudioStreamQueue | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const recordedChunksRef = useRef<Float32Array[]>([]);
 
   /**
    * Connect to OpenAI Realtime API WebSocket via local proxy
@@ -155,128 +161,157 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       // Initialize audio queue for playback
       if (!audioQueueRef.current) {
         audioQueueRef.current = new AudioStreamQueue(24000, () => {
+          // Callback when audio queue is empty (all chunks played)
           setState((prev) => ({ ...prev, isAISpeaking: false }));
         });
-        console.log('[Realtime v2] Audio queue initialized');
+        console.log('[Realtime] Audio queue initialized');
       }
 
+      // Connect to local WebSocket proxy server
+      // The proxy handles authentication and connection to OpenAI
       const PROXY_URL = process.env.NEXT_PUBLIC_REALTIME_PROXY_URL || 'ws://localhost:8081';
-      console.log(`[Realtime v2] Connecting to proxy: ${PROXY_URL}`);
+
+      console.log(`[Realtime] Connecting to proxy: ${PROXY_URL}`);
 
       const ws = new WebSocket(PROXY_URL);
 
       ws.onopen = () => {
-        console.log('[Realtime v2] Connected to proxy server');
+        console.log('[Realtime] Connected to proxy server successfully');
+        console.log('[Realtime] Waiting for OpenAI connection...');
         setState((prev) => ({ ...prev, isConnected: true, error: null }));
+
+        // Note: Session configuration is handled by the proxy server
       };
 
       ws.onmessage = async (event) => {
         try {
           let data = event.data;
+
+          // If data is a Blob, convert to text first
           if (data instanceof Blob) {
             data = await data.text();
           }
 
           const message = JSON.parse(data);
-          console.log('[Realtime v2] Received:', message.type);
+          console.log('[Realtime] Received message:', message.type);
           handleRealtimeEvent(message);
         } catch (error) {
-          console.error('[Realtime v2] Failed to parse message:', error);
+          console.error('[Realtime] Failed to parse message:', error);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[Realtime v2] WebSocket error:', error);
+        console.error('[Realtime] WebSocket error occurred');
+        console.error('[Realtime] Error details:', error);
+        // Don't set error state here - wait for onclose to determine if connection truly failed
       };
 
       ws.onclose = (event) => {
-        console.log('[Realtime v2] WebSocket closed:', event.code);
+        console.log('[Realtime] WebSocket closed');
+        console.log('[Realtime] Close code:', event.code);
+        console.log('[Realtime] Close reason:', event.reason);
+        console.log('[Realtime] Was clean:', event.wasClean);
+
         let errorMessage = '';
+        // Only set error for abnormal closures
         if (event.code === 1006) {
-          errorMessage = '連接異常關閉';
+          errorMessage = '連接異常關閉。可能是 API key 無效或網絡問題。';
+        } else if (event.code === 1008) {
+          errorMessage = '連接被拒絕。請確認 API key 有效。';
         } else if (!event.wasClean && event.code !== 1001 && event.code !== 1005) {
-          errorMessage = `連接斷開 (code: ${event.code})`;
+          errorMessage = `連接意外斷開 (code: ${event.code})`;
         }
 
         setState((prev) => ({
           ...prev,
           isConnected: false,
-          error: errorMessage || null,
+          error: errorMessage || null, // Clear previous errors if closing normally
         }));
       };
 
       wsRef.current = ws;
     } catch (error) {
-      console.error('[Realtime v2] Connection error:', error);
+      console.error('[Realtime] Connection error:', error);
       setState((prev) => ({
         ...prev,
         error: 'Failed to connect to Realtime API',
       }));
     }
-  }, []);
+  }, [config]);
 
   /**
    * Handle Realtime API events
-   * Based on reference project event handling
    */
   const handleRealtimeEvent = (event: any) => {
     switch (event.type) {
       case 'session.created':
+        console.log('[Realtime] Session created:', event.session.id);
+        break;
+
       case 'session.updated':
-        console.log('[Realtime v2] Session:', event.type);
+        console.log('[Realtime] Session updated');
         break;
 
       case 'conversation.item.created':
-        console.log('[Realtime v2] Item created');
+        console.log('[Realtime] Item created:', event.item);
         break;
 
-      // Audio response handling (same as reference project)
+      case 'input_audio_buffer.speech_started':
+        console.log('[Realtime] User started speaking');
+        setState((prev) => ({ ...prev, isRecording: true }));
+        break;
+
+      case 'input_audio_buffer.speech_stopped':
+        console.log('[Realtime] User stopped speaking');
+        setState((prev) => ({ ...prev, isRecording: false }));
+        break;
+
+      case 'conversation.item.input_audio_transcription.completed':
+        console.log('[Realtime] Transcription:', event.transcript);
+        setState((prev) => ({ ...prev, transcript: event.transcript }));
+        break;
+
       case 'response.audio.delta':
+        // Handle audio output chunk
         playAudioChunk(event.delta);
         break;
 
       case 'response.audio.done':
-        console.log('[Realtime v2] Audio response complete');
-        break;
-
-      // Transcript handling
-      case 'conversation.item.input_audio_transcription.completed':
-      case 'response.content_part.done':
-        if (event.transcript || event.part?.transcript) {
-          const transcript = event.transcript || event.part.transcript;
-          console.log('[Realtime v2] Transcript:', transcript);
-          setState((prev) => ({ ...prev, transcript }));
-        }
+        console.log('[Realtime] Audio response complete');
+        // Note: isAISpeaking will be set to false after queue finishes playing
+        // We don't set it here immediately to avoid premature state change
         break;
 
       case 'response.done':
-        console.log('[Realtime v2] Response complete');
+        console.log('[Realtime] Response complete');
         break;
 
       case 'error':
-        console.error('[Realtime v2] Error event:', event);
-        const errorMessage = event.error?.message || event.error?.type || 'Unknown error';
+        console.error('[Realtime] Error event received:', event);
+        console.error('[Realtime] Error details:', JSON.stringify(event.error, null, 2));
+
+        const errorMessage = event.error?.message
+          || event.error?.type
+          || 'Unknown error occurred';
+
         setState((prev) => ({ ...prev, error: errorMessage }));
         break;
 
       default:
-        console.log('[Realtime v2] Unhandled event:', event.type);
+        console.log('[Realtime] Unhandled event:', event.type);
     }
   };
 
   /**
    * Start recording audio from microphone
-   * Accumulates audio chunks instead of streaming
    */
   const startRecording = useCallback(async () => {
     try {
+      // Don't start if already recording
       if (mediaStreamRef.current || audioContextRef.current) {
-        console.warn('[Realtime v2] Already recording');
+        console.warn('[Realtime] Already recording');
         return;
       }
-
-      // Clear previous recording
-      recordedChunksRef.current = [];
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
@@ -284,28 +319,49 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       const audioContext = new AudioContext({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
 
+      console.log('[Realtime] AudioContext sample rate:', audioContext.sampleRate);
+
       const source = audioContext.createMediaStreamSource(stream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
+      // Save references for cleanup
       sourceRef.current = source;
       processorRef.current = processor;
 
-      // Accumulate audio chunks (instead of sending immediately)
+      let audioChunkCount = 0;
+
       processor.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        // Create a copy of the data
-        const chunk = new Float32Array(inputData.length);
-        chunk.set(inputData);
-        recordedChunksRef.current.push(chunk);
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          const inputData = e.inputBuffer.getChannelData(0);
+          const pcm16 = convertFloat32ToPCM16(inputData);
+          const base64Audio = arrayBufferToBase64(pcm16);
+
+          if (audioChunkCount === 0) {
+            console.log('[Realtime] First audio chunk:', {
+              samples: inputData.length,
+              pcm16Size: pcm16.byteLength,
+              base64Length: base64Audio.length,
+            });
+          }
+          audioChunkCount++;
+
+          // Send audio chunk to Realtime API
+          wsRef.current.send(
+            JSON.stringify({
+              type: 'input_audio_buffer.append',
+              audio: base64Audio,
+            })
+          );
+        }
       };
 
       source.connect(processor);
       processor.connect(audioContext.destination);
 
-      console.log('[Realtime v2] Recording started');
+      console.log('[Realtime] Recording started');
       setState((prev) => ({ ...prev, isRecording: true }));
     } catch (error) {
-      console.error('[Realtime v2] Failed to start recording:', error);
+      console.error('[Realtime] Failed to start recording:', error);
       setState((prev) => ({
         ...prev,
         error: 'Failed to access microphone',
@@ -314,19 +370,19 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
   }, []);
 
   /**
-   * Stop recording and send accumulated audio
-   * Based on reference project's approach
+   * Stop recording audio
    */
   const stopRecording = useCallback(() => {
-    console.log('[Realtime v2] Stopping recording...');
+    console.log('[Realtime] Stopping recording...');
 
-    // Step 1: Disconnect audio nodes
+    // Step 1: Disconnect audio nodes first to stop processing
     if (sourceRef.current && processorRef.current) {
       try {
         sourceRef.current.disconnect();
         processorRef.current.disconnect();
+        console.log('[Realtime] Audio nodes disconnected');
       } catch (error) {
-        console.warn('[Realtime v2] Error disconnecting nodes:', error);
+        console.warn('[Realtime] Error disconnecting nodes:', error);
       }
       sourceRef.current = null;
       processorRef.current = null;
@@ -336,57 +392,35 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
+      console.log('[Realtime] Media stream stopped');
     }
 
-    // Step 3: Close audio context
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    // Step 4: Process and send accumulated audio
-    if (recordedChunksRef.current.length > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log(`[Realtime v2] Processing ${recordedChunksRef.current.length} audio chunks`);
-
-      // Concatenate all chunks into one Float32Array
-      const totalLength = recordedChunksRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
-      const combinedAudio = new Float32Array(totalLength);
-
-      let offset = 0;
-      for (const chunk of recordedChunksRef.current) {
-        combinedAudio.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      // Convert to PCM16 and Base64 (same as reference project)
-      const base64Audio = convertFloat32ToBase64(combinedAudio);
-
-      // Send as conversation item (reference project approach)
-      console.log('[Realtime v2] Sending conversation item...');
+    // Step 3: Commit audio buffer and request response
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log('[Realtime] Committing audio buffer...');
       wsRef.current.send(
         JSON.stringify({
-          type: 'conversation.item.create',
-          item: {
-            type: 'message',
-            role: 'user',
-            content: [
-              {
-                type: 'input_audio',
-                audio: base64Audio,
-              },
-            ],
-          },
+          type: 'input_audio_buffer.commit',
         })
       );
 
-      // Request response
-      console.log('[Realtime v2] Requesting AI response...');
-      wsRef.current.send(JSON.stringify({ type: 'response.create' }));
-
-      // Clear recorded chunks
-      recordedChunksRef.current = [];
+      console.log('[Realtime] Requesting AI response...');
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'response.create',
+        })
+      );
     }
 
+    // Step 4: Close audio context (async cleanup)
+    if (audioContextRef.current) {
+      audioContextRef.current.close().then(() => {
+        console.log('[Realtime] AudioContext closed');
+      });
+      audioContextRef.current = null;
+    }
+
+    console.log('[Realtime] Recording stopped');
     setState((prev) => ({ ...prev, isRecording: false }));
   }, []);
 
@@ -394,23 +428,25 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
    * Disconnect from Realtime API
    */
   const disconnect = useCallback(() => {
-    // Clean up recording
+    // Disconnect audio nodes
     if (sourceRef.current && processorRef.current) {
       try {
         sourceRef.current.disconnect();
         processorRef.current.disconnect();
       } catch (error) {
-        // Ignore
+        // Ignore errors during cleanup
       }
       sourceRef.current = null;
       processorRef.current = null;
     }
 
+    // Stop media stream
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
 
+    // Close audio context
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
@@ -428,8 +464,6 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
       wsRef.current = null;
     }
 
-    recordedChunksRef.current = [];
-
     setState({
       isConnected: false,
       isRecording: false,
@@ -444,8 +478,11 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
    */
   const playAudioChunk = async (base64Audio: string) => {
     if (audioQueueRef.current) {
+      console.log('[Realtime] Playing audio chunk');
       await audioQueueRef.current.enqueue(base64Audio);
       setState((prev) => ({ ...prev, isAISpeaking: true }));
+    } else {
+      console.warn('[Realtime] Audio queue not initialized');
     }
   };
 
@@ -468,23 +505,27 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
 }
 
 /**
- * Convert Float32Array to Base64
- * Based on reference project's implementation
+ * Convert Float32Array to PCM16
  */
-function convertFloat32ToBase64(float32Array: Float32Array): string {
-  // Convert to PCM16
+function convertFloat32ToPCM16(float32Array: Float32Array): ArrayBuffer {
   const pcm16 = new Int16Array(float32Array.length);
   for (let i = 0; i < float32Array.length; i++) {
     const s = Math.max(-1, Math.min(1, float32Array[i]));
     pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
+  return pcm16.buffer;
+}
 
-  // Convert to Base64
-  const bytes = new Uint8Array(pcm16.buffer);
+/**
+ * Convert ArrayBuffer to Base64
+ * Using proper binary-to-base64 conversion for PCM16 audio data
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
   const len = bytes.byteLength;
   let binary = '';
 
-  // Process in chunks to avoid stack overflow
+  // Process in chunks to avoid stack overflow with large arrays
   const chunkSize = 8192;
   for (let i = 0; i < len; i += chunkSize) {
     const chunk = bytes.subarray(i, Math.min(i + chunkSize, len));

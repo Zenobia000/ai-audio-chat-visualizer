@@ -1,12 +1,8 @@
 /**
- * WebSocket Proxy Server for OpenAI Realtime API (Simplified Version)
+ * WebSocket Proxy Server for OpenAI Realtime API
  *
- * Based on: https://github.com/AwaisKamran/openai-realtime-api
- *
- * Key Changes:
- * - Removed automatic session configuration
- * - Simplified event forwarding
- * - Minimal configuration for stability
+ * This server acts as a proxy between the browser and OpenAI Realtime API
+ * to bypass CORS restrictions and handle authentication securely.
  */
 
 const WebSocket = require('ws');
@@ -17,24 +13,24 @@ const PORT = process.env.REALTIME_PROXY_PORT || 8081;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 if (!OPENAI_API_KEY) {
-  console.error('[Proxy v2] ERROR: OPENAI_API_KEY not found in environment variables');
+  console.error('[Proxy] ERROR: OPENAI_API_KEY not found in environment variables');
   process.exit(1);
 }
 
 // Create HTTP server
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('OpenAI Realtime API WebSocket Proxy Server (v2 - Simplified)\\n');
+  res.end('OpenAI Realtime API WebSocket Proxy Server\n');
 });
 
 // Create WebSocket server
 const wss = new WebSocket.Server({ server });
 
-console.log(`[Proxy v2] WebSocket Proxy Server starting on port ${PORT}...`);
+console.log(`[Proxy] WebSocket Proxy Server starting on port ${PORT}...`);
 
 // Handle client connections
 wss.on('connection', (clientWs) => {
-  console.log('[Proxy v2] New client connected');
+  console.log('[Proxy] New client connected');
 
   let openaiWs = null;
 
@@ -51,10 +47,9 @@ wss.on('connection', (clientWs) => {
 
     // OpenAI connection opened
     openaiWs.on('open', () => {
-      console.log('[Proxy v2] Connected to OpenAI Realtime API');
+      console.log('[Proxy] Connected to OpenAI Realtime API');
 
-      // Simplified configuration (following reference project approach)
-      // Only configure essential settings
+      // Send initial session configuration
       const sessionConfig = {
         type: 'session.update',
         session: {
@@ -63,47 +58,43 @@ wss.on('connection', (clientWs) => {
           voice: 'alloy',
           input_audio_format: 'pcm16',
           output_audio_format: 'pcm16',
-          input_audio_transcription: {
-            model: 'whisper-1'
+          turn_detection: {
+            type: 'server_vad',
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500,
           },
-          // No turn_detection - manual control via button
           temperature: 0.8,
           max_response_output_tokens: 4096,
         },
       };
 
       openaiWs.send(JSON.stringify(sessionConfig));
-      console.log('[Proxy v2] Sent simplified session configuration');
+      console.log('[Proxy] Sent initial session configuration');
     });
 
     // Forward messages from OpenAI to client
     openaiWs.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
-
-        // Only log important events to reduce noise
-        if (message.type === 'error' ||
-            message.type === 'response.done' ||
-            message.type === 'conversation.item.created') {
-          console.log(`[Proxy v2] OpenAI → Client: ${message.type}`);
-        }
+        console.log(`[Proxy] OpenAI → Client: ${message.type}`);
 
         // Log error details for debugging
         if (message.type === 'error') {
-          console.error('[Proxy v2] OpenAI Error Details:', JSON.stringify(message.error, null, 2));
+          console.error('[Proxy] OpenAI Error Details:', JSON.stringify(message.error, null, 2));
         }
 
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.send(data);
         }
       } catch (error) {
-        console.error('[Proxy v2] Error parsing OpenAI message:', error);
+        console.error('[Proxy] Error parsing OpenAI message:', error);
       }
     });
 
     // Handle OpenAI connection errors
     openaiWs.on('error', (error) => {
-      console.error('[Proxy v2] OpenAI WebSocket error:', error.message);
+      console.error('[Proxy] OpenAI WebSocket error:', error.message);
 
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.send(JSON.stringify({
@@ -118,7 +109,7 @@ wss.on('connection', (clientWs) => {
 
     // Handle OpenAI connection close
     openaiWs.on('close', (code, reason) => {
-      console.log(`[Proxy v2] OpenAI connection closed: ${code} - ${reason}`);
+      console.log(`[Proxy] OpenAI connection closed: ${code} - ${reason}`);
 
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.close(1000, 'OpenAI connection closed');
@@ -126,7 +117,7 @@ wss.on('connection', (clientWs) => {
     });
 
   } catch (error) {
-    console.error('[Proxy v2] Failed to connect to OpenAI:', error.message);
+    console.error('[Proxy] Failed to connect to OpenAI:', error.message);
     clientWs.close(1011, 'Failed to connect to OpenAI');
     return;
   }
@@ -135,26 +126,21 @@ wss.on('connection', (clientWs) => {
   clientWs.on('message', (data) => {
     try {
       const message = JSON.parse(data.toString());
-
-      // Only log important events
-      if (message.type === 'conversation.item.create' ||
-          message.type === 'response.create') {
-        console.log(`[Proxy v2] Client → OpenAI: ${message.type}`);
-      }
+      console.log(`[Proxy] Client → OpenAI: ${message.type}`);
 
       if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
         openaiWs.send(data);
       } else {
-        console.warn('[Proxy v2] OpenAI connection not ready, message dropped');
+        console.warn('[Proxy] OpenAI connection not ready, message dropped');
       }
     } catch (error) {
-      console.error('[Proxy v2] Error parsing client message:', error);
+      console.error('[Proxy] Error parsing client message:', error);
     }
   });
 
   // Handle client disconnection
   clientWs.on('close', (code, reason) => {
-    console.log(`[Proxy v2] Client disconnected: ${code} - ${reason}`);
+    console.log(`[Proxy] Client disconnected: ${code} - ${reason}`);
 
     if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
       openaiWs.close(1000, 'Client disconnected');
@@ -163,25 +149,24 @@ wss.on('connection', (clientWs) => {
 
   // Handle client errors
   clientWs.on('error', (error) => {
-    console.error('[Proxy v2] Client WebSocket error:', error.message);
+    console.error('[Proxy] Client WebSocket error:', error.message);
   });
 });
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`[Proxy v2] ✅ WebSocket Proxy Server running on ws://localhost:${PORT}`);
-  console.log(`[Proxy v2] Forwarding to: wss://api.openai.com/v1/realtime`);
-  console.log(`[Proxy v2] Configuration: Simplified (manual control, no auto-VAD)`);
-  console.log(`[Proxy v2] Press Ctrl+C to stop`);
+  console.log(`[Proxy] ✅ WebSocket Proxy Server running on ws://localhost:${PORT}`);
+  console.log(`[Proxy] Forwarding to: wss://api.openai.com/v1/realtime`);
+  console.log(`[Proxy] Press Ctrl+C to stop`);
 });
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\\n[Proxy v2] Shutting down gracefully...');
+  console.log('\n[Proxy] Shutting down gracefully...');
   wss.close(() => {
-    console.log('[Proxy v2] WebSocket server closed');
+    console.log('[Proxy] WebSocket server closed');
     server.close(() => {
-      console.log('[Proxy v2] HTTP server closed');
+      console.log('[Proxy] HTTP server closed');
       process.exit(0);
     });
   });
