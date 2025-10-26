@@ -255,11 +255,14 @@ export function useRealtimeAPI(config: RealtimeConfig = {}) {
 
       case 'error':
         console.error('[Realtime v2] Error event received:', event);
-        console.error('[Realtime v2] Error details:', JSON.stringify(event.error, null, 2));
+        console.error('[Realtime v2] Full error object:', JSON.stringify(event, null, 2));
 
+        // Extract meaningful error message
         const errorMessage = event.error?.message
           || event.error?.type
-          || 'Unknown error occurred';
+          || event.error?.code
+          || (event.error ? JSON.stringify(event.error) : null)
+          || 'Unknown error from OpenAI Realtime API';
 
         setState((prev) => ({ ...prev, error: errorMessage }));
         break;

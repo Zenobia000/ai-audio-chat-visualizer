@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRealtimeAPI } from '@/src/main/typescript/hooks/useRealtimeAPI';
 
@@ -9,6 +9,8 @@ export default function RealtimePage() {
     voice: 'alloy',
     temperature: 0.8,
   });
+
+  const isRecordingRef = useRef(false);
 
   useEffect(() => {
     // Auto-connect on mount
@@ -19,6 +21,40 @@ export default function RealtimePage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keyboard support - Space bar to record
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle Space key, not already recording, and element not in input/textarea
+      if (
+        e.code === 'Space' &&
+        !isRecordingRef.current &&
+        state.isConnected &&
+        !state.isAISpeaking &&
+        !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)
+      ) {
+        e.preventDefault();
+        isRecordingRef.current = true;
+        startRecording();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && isRecordingRef.current) {
+        e.preventDefault();
+        isRecordingRef.current = false;
+        stopRecording();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [state.isConnected, state.isAISpeaking, startRecording, stopRecording]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -113,8 +149,8 @@ export default function RealtimePage() {
         <div className="p-4 bg-white/80 backdrop-blur rounded-xl border border-gray-200 space-y-2">
           <h3 className="text-sm font-semibold text-gray-700">使用說明</h3>
           <ul className="text-xs text-gray-600 space-y-1">
-            <li>• 按住麥克風按鈕開始說話</li>
-            <li>• 放開按鈕後 AI 會自動處理並回應</li>
+            <li>• 按住麥克風按鈕或按住 <kbd className="px-2 py-0.5 bg-gray-200 rounded text-xs font-mono">空格鍵</kbd> 開始說話</li>
+            <li>• 放開按鈕/鍵盤後 AI 會自動處理並回應</li>
             <li>• 支援繁體中文對話</li>
           </ul>
         </div>
