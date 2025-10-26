@@ -103,8 +103,19 @@ export default function RealtimePage() {
         {/* Status & Messages */}
         <div className="space-y-4">
           {state.error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600">❌ {state.error}</p>
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
+              <p className="text-red-600 font-semibold">❌ 錯誤</p>
+              <p className="text-red-600">{state.error}</p>
+              <div className="mt-3 p-3 bg-white border border-red-300 rounded text-sm">
+                <p className="font-semibold mb-2">診斷步驟：</p>
+                <ol className="list-decimal list-inside space-y-1 text-gray-700">
+                  <li>確認 .env 檔案中有 OPENAI_API_KEY</li>
+                  <li>確認 API key 有 Realtime API 存取權限</li>
+                  <li>打開瀏覽器開發者工具 (F12) 查看 Console 詳細錯誤</li>
+                  <li>檢查 Network 頁籤的 WS 連接狀態</li>
+                  <li>嘗試重新整理頁面</li>
+                </ol>
+              </div>
             </div>
           )}
 
